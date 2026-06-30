@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Máquina de Pascal - Reto Matemático</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap');
+
+        body {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .game-container {
+            background-color: #16213e;
+            border: 4px solid #f2a900; /* Amarillo de la insignia */
+            border-radius: 15px;
+            width: 90%;
+            max-width: 700px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(242, 169, 0, 0.5);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e94560;
+            padding-bottom: 10px;
+        }
+
+        .logo {
+            width: 80px;
+            height: auto;
+        }
+
+        h1 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            color: #f2a900;
+            text-shadow: 2px 2px #e94560;
+            line-height: 1.5;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #4cd137;
+        }
+
+        .question-box {
+            font-size: 20px;
+            margin-bottom: 25px;
+            min-height: 60px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        button.option-btn {
+            background-color: #0f3460;
+            color: white;
+            border: 2px solid #e94560;
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Roboto', sans-serif;
+            font-weight: bold;
+        }
+
+        button.option-btn:hover {
+            background-color: #e94560;
+            transform: scale(1.05);
+        }
+
+        .open-answer-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 18px;
+            width: 80%;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 2px solid #f2a900;
+            text-align: center;
+        }
+
+        button.submit-btn {
+            background-color: #4cd137;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .feedback {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 25px;
+        }
+
+        .btn-start {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #e94560;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        #game-area { display: none; }
+        #end-screen { display: none; }
+
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div class="header">
+        <img src="INSIGNIA I.E.I. INDUSTRIAL PERENE.jpg" alt="Insignia I.E.I. Industrial Perené" class="logo">
+        <h1>LA PASCALINA:<br>EL ORIGEN DEL CÓMPUTO</h1>
+        <img src="INSIGNIA I.E.I. INDUSTRIAL PERENE.jpg" alt="Insignia" class="logo" style="visibility: hidden;">
+    </div>
+
+    <div id="start-screen">
+        <p>¡Bienvenido estudiante de 6to grado!</p>
+        <p>Demuestra tus conocimientos sobre Blaise Pascal, su increíble máquina y cómo revolucionó las matemáticas.</p>
+        <button class="btn-start" onclick="startGame()">▶ INICIAR JUEGO</button>
+    </div>
+
+    <div id="game-area">
+        <div class="status-bar">
+            <span id="question-counter">Pregunta: 1/20</span>
+            <span id="score-display">Puntaje: 0</span>
+        </div>
+        
+        <div class="question-box" id="question-text">Cargando pregunta...</div>
+
+        <div class="options-grid" id="options-area"></div>
+
+        <div class="open-answer-container" id="open-area">
+            <input type="text" id="open-input" placeholder="Escribe tu respuesta aquí...">
+            <button class="submit-btn" onclick="checkOpenAnswer()">Confirmar Respuesta</button>
+        </div>
+
+        <div class="feedback" id="feedback-text"></div>
+    </div>
+
+    <div id="end-screen">
+        <h2>¡Misión Completada!</h2>
+        <p id="final-score" style="font-size: 24px; color: #f2a900;"></p>
+        <p id="final-message"></p>
+        <button class="btn-start" onclick="location.reload()">JUGAR DE NUEVO</button>
+    </div>
+</div>
+
+<script>
+    // --- GENERADOR DE SONIDOS 10-BITS (Web Audio API) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        if (type === 'correct') {
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
+            oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); // Sube a A5
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        } else if (type === 'incorrect') {
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3); // Baja tono
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        }
+    }
+
+    // --- BANCO DE 20 PREGUNTAS ---
+    // Tipos: "mc" (Opción múltiple/cerrada), "open" (Pregunta abierta)
+    const questions = [
+        { q: "¿Quién fue el inventor de la Pascalina?", type: "mc", options: ["Albert Einstein", "Blaise Pascal", "Isaac Newton", "Galileo Galilei"], answer: "Blaise Pascal" },
+        { q: "¿En qué año aproximado se inventó la Pascalina?", type: "mc", options: ["1950", "2001", "1642", "1800"], answer: "1642" },
+        { q: "¿Para qué familiar construyó Pascal esta máquina?", type: "mc", options: ["Su hermano", "Su abuelo", "Su maestro", "Su padre"], answer: "Su padre" },
+        { q: "El padre de Pascal trabajaba como...", type: "open", answer: "recaudador de impuestos", hint: "Persona que cobra los tributos al pueblo (3 palabras)" },
+        { q: "¿Qué operaciones matemáticas podía hacer DIRECTAMENTE la Pascalina?", type: "mc", options: ["Sumar y restar", "Multiplicar y dividir", "Raíz cuadrada", "Fracciones"], answer: "Sumar y restar" },
+        { q: "¿Qué mecanismo interno usaba la Pascalina para funcionar?", type: "mc", options: ["Cables eléctricos", "Ruedas dentadas (engranajes)", "Microchips", "Pilas y motores"], answer: "Ruedas dentadas (engranajes)" },
+        { q: "Verdadero o Falso: La Pascalina necesitaba electricidad para funcionar.", type: "mc", options: ["Verdadero", "Falso"], answer: "Falso" },
+        { q: "¿De qué país era originario Blaise Pascal?", type: "open", answer: "francia" },
+        { q: "¿Con qué otro nombre se le conoce a la Pascalina?", type: "mc", options: ["Calculadora solar", "Máquina aritmética", "Computadora cuántica", "Abaco mecánico"], answer: "Máquina aritmética" },
+        { q: "Para sumar números grandes, la máquina usaba un sistema que pasaba el 'llevo' a la siguiente rueda. ¿Cómo se llama esto en matemáticas?", type: "mc", options: ["Acarreo", "Resta", "División", "Geometría"], answer: "Acarreo" },
+        { q: "Verdadero o Falso: La Pascalina fue la primera calculadora que se produjo comercialmente (para vender).", type: "mc", options: ["Verdadero", "Falso"], answer: "Verdadero" },
+        { q: "¿De qué material estaba construida principalmente la caja de la Pascalina?", type: "mc", options: ["Plástico y cristal", "Madera y latón (metal)", "Cartón", "Aluminio"], answer: "Madera y latón (metal)" },
+        { q: "Si la primera rueda gira del 0 al 9 y pasa al 0 otra vez, ¿cuánto avanza la rueda de al lado?", type: "mc", options: ["Avanza 5 posiciones", "Retrocede", "Avanza 1 posición", "No se mueve"], answer: "Avanza 1 posición" },
+        { q: "Escribe la palabra: La Pascalina es considerada la abuela de la actual _________", type: "open", answer: "calculadora" },
+        { q: "¿Cómo se ingresaban los números en la máquina?", type: "mc", options: ["Con un teclado", "Con una pantalla táctil", "Girando las ruedas con un punzón", "Por voz"], answer: "Girando las ruedas con un punzón" },
+        { q: "Aunque estaba diseñada para sumar y restar, ¿podía multiplicar?", type: "mc", options: ["No, era imposible", "Sí, mediante sumas repetidas", "Sí, con un botón especial de 'X'"], answer: "Sí, mediante sumas repetidas" },
+        { q: "¿Cuántos años tenía Pascal cuando inventó esta máquina?", type: "mc", options: ["19 años", "40 años", "65 años", "8 años"], answer: "19 años" },
+        { q: "Hoy en día, el sistema de engranajes de la Pascalina se sigue usando en...", type: "mc", options: ["Los odómetros (cuentakilómetros) de los autos antiguos", "Las pantallas de los celulares", "Los satélites"], answer: "Los odómetros (cuentakilómetros) de los autos antiguos" },
+        { q: "Verdadero o Falso: Pascal inventó la máquina porque veía a su padre sufrir haciendo largos cálculos a mano.", type: "mc", options: ["Verdadero", "Falso"], answer: "Verdadero" },
+        { q: "En la informática moderna, existe un lenguaje de programación nombrado en honor a él. ¿Cómo se llama?", type: "open", answer: "pascal" }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        const q = questions[currentQuestionIndex];
+        document.getElementById('question-counter').innerText = `Pregunta: ${currentQuestionIndex + 1}/${questions.length}`;
+        document.getElementById('question-text').innerText = q.q;
+        document.getElementById('feedback-text').innerText = "";
+        
+        const optionsArea = document.getElementById('options-area');
+        const openArea = document.getElementById('open-area');
+        const openInput = document.getElementById('open-input');
+
+        if (q.type === 'mc') {
+            optionsArea.style.display = 'grid';
+            openArea.style.display = 'none';
+            optionsArea.innerHTML = '';
+            
+            // Mezclar opciones para que no siempre estén en el mismo lugar
+            let shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+            
+            shuffledOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(opt, q.answer);
+                optionsArea.appendChild(btn);
+            });
+        } else if (q.type === 'open') {
+            optionsArea.style.display = 'none';
+            openArea.style.display = 'flex';
+            openInput.value = '';
+            if(q.hint) {
+                openInput.placeholder = q.hint;
+            } else {
+                openInput.placeholder = "Escribe tu respuesta aquí...";
+            }
+            openInput.focus();
+        }
+    }
+
+    function checkOpenAnswer() {
+        const q = questions[currentQuestionIndex];
+        const userAnswer = document.getElementById('open-input').value.trim().toLowerCase();
+        const correctAnswer = q.answer.toLowerCase();
+        
+        // Flexibilidad: si la respuesta del usuario incluye la palabra clave
+        if (userAnswer.includes(correctAnswer) || correctAnswer.includes(userAnswer) && userAnswer.length > 3) {
+             checkAnswer(userAnswer, userAnswer); // Forzar correcto
+        } else {
+             checkAnswer(userAnswer, correctAnswer); // Forzar incorrecto
+        }
+    }
+
+    function checkAnswer(selected, correct) {
+        const feedback = document.getElementById('feedback-text');
+        
+        if (selected.toString().toLowerCase() === correct.toString().toLowerCase()) {
+            playSound('correct');
+            feedback.style.color = '#4cd137';
+            feedback.innerText = "¡CORRECTO! +10 puntos";
+            score += 10;
+        } else {
+            playSound('incorrect');
+            feedback.style.color = '#e74c3c';
+            feedback.innerText = `¡INCORRECTO! La respuesta era: ${correct}`;
+        }
+
+        document.getElementById('score-display').innerText = `Puntaje: ${score}`;
+        
+        // Deshabilitar botones temporalmente
+        const buttons = document.querySelectorAll('.option-btn, .submit-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+            buttons.forEach(b => b.disabled = false);
+        }, 2000); // 2 segundos para leer el feedback
+    }
+
+    function endGame() {
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('end-screen').style.display = 'block';
+        
+        document.getElementById('final-score').innerText = `Tu puntaje final: ${score} / 200`;
+        
+        let msg = "";
+        if (score >= 180) msg = "¡Nivel Experto! Eres un genio de la informática como Pascal.";
+        else if (score >= 120) msg = "¡Muy bien! Tienes madera de inventor.";
+        else msg = "Buen intento. ¡Sigue practicando para mejorar tu lógica!";
+        
+        document.getElementById('final-message').innerText = msg;
+    }
+</script>
+
+</body>
+</html>
